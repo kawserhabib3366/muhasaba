@@ -31,7 +31,7 @@ const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, 
   useEffect(() => {
     if (profile.physicalLevel > prevLevelRef.current) {
       setIsLevelingUp(true);
-      const timer = setTimeout(() => setIsLevelingUp(false), 2000);
+      const timer = setTimeout(() => setIsLevelingUp(false), 2500);
       prevLevelRef.current = profile.physicalLevel;
       return () => clearTimeout(timer);
     }
@@ -121,8 +121,21 @@ const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, 
                >
                   RANK: {currentRank}
                </button>
-               <div className={`px-3 py-1 system-bg border system-border rounded-xl text-[11px] system-text font-system font-black uppercase tracking-wider transition-all ${isLevelingUp ? 'level-up-animate' : 'transition-theme'}`}>
-                  LVL: {profile.physicalLevel}
+               
+               {/* Level Badge with Flourish */}
+               <div className="relative">
+                 <div className={`px-3 py-1 system-bg border system-border rounded-xl text-[11px] system-text font-system font-black uppercase tracking-wider transition-all relative z-10 ${isLevelingUp ? 'level-up-animate brightness-150 scale-110 shadow-[0_0_20px_var(--primary-glow)]' : 'transition-theme'}`}>
+                    LVL: {profile.physicalLevel}
+                 </div>
+                 {isLevelingUp && (
+                   <>
+                     <div className="absolute inset-0 bg-white rounded-xl blur-md animate-ping opacity-60 z-0 transition-theme"></div>
+                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-system font-black system-text tracking-[0.3em] animate-bounce z-20 shadow-2xl">
+                       LEVEL UP!
+                     </div>
+                     <div className="absolute -inset-2 border-2 system-border rounded-2xl animate-pulse opacity-40 z-0"></div>
+                   </>
+                 )}
                </div>
              </div>
            </div>
@@ -140,7 +153,7 @@ const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, 
              </div>
              <div className="h-1.5 w-full bg-black/60 rounded-full border border-white/5 overflow-hidden">
                <div 
-                 className="h-full bg-white transition-all duration-700 ease-out shadow-[0_0_10px_rgba(255,255,255,0.4)]" 
+                 className={`h-full bg-white transition-all duration-700 ease-out shadow-[0_0_10px_rgba(255,255,255,0.4)] ${isLevelingUp ? 'brightness-200' : ''}`} 
                  style={{ width: `${expPercentage}%` }}
                />
              </div>
@@ -153,7 +166,7 @@ const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, 
              </div>
              <div className="h-2 w-full bg-black/60 rounded-full border border-white/5 overflow-hidden">
                <div 
-                 className="h-full system-btn transition-all duration-1000 ease-out" 
+                 className={`h-full system-btn transition-all duration-1000 ease-out ${isLevelingUp ? 'brightness-150 animate-pulse' : ''}`} 
                  style={{ width: `${totalCompletion}%` }}
                />
              </div>

@@ -280,19 +280,19 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen pb-32 md:pb-0 md:pt-10 flex flex-col items-center">
+    <div className="min-h-screen pb-40 pt-4 md:pt-6 flex flex-col items-center">
       <div className="fixed inset-0 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_center,_var(--primary-bg),_transparent_70%)]"></div>
 
-      <header className="w-full max-w-4xl px-4 mb-8 flex flex-col items-center text-center">
-        <h1 className="text-4xl md:text-5xl font-system font-black tracking-tighter system-text system-glow mb-2 uppercase italic transition-theme">
+      <header className="w-full max-w-4xl px-4 mb-8 flex flex-col items-center text-center relative z-10">
+        <h1 className="text-2xl md:text-3xl font-system font-black tracking-tighter system-text system-glow mb-1 uppercase italic transition-theme animate-title">
           Muhāsabah
         </h1>
-        <p className="text-gray-400 font-system text-[10px] uppercase tracking-[0.4em] font-black italic">
+        <p className="text-gray-400 font-system text-[8px] uppercase tracking-[0.6em] font-black italic opacity-60">
           Fear Allah, Reject Weakness.
         </p>
       </header>
 
-      <main className="w-full max-w-lg px-4 flex-1 flex flex-col gap-6 relative z-10 transition-all duration-500">
+      <main className="w-full max-w-lg px-4 flex-1 flex flex-col gap-10 relative z-10 transition-all duration-500">
         {activeTab === 'status' && (
           <StatusWindow 
             profile={profile} 
@@ -348,14 +348,14 @@ const App: React.FC = () => {
       </main>
 
       {/* Floating Navigation Dock */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-lg nav-glass rounded-3xl flex justify-around p-3 z-50 shadow-2xl system-border overflow-hidden">
+      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-md nav-glass rounded-[2rem] flex justify-around p-3 z-50 shadow-2xl overflow-hidden border border-white/10">
         <div className="absolute inset-0 bg-white/5 opacity-50 pointer-events-none"></div>
-        <NavButton active={activeTab === 'status'} onClick={() => setActiveTab('status')} icon={<StatusIcon />} label="Trust" />
-        <NavButton active={activeTab === 'amal'} onClick={() => setActiveTab('amal')} icon={<AmalIcon />} label="Vessel" />
-        <NavButton active={activeTab === 'spirit'} onClick={() => setActiveTab('spirit')} icon={<SpiritIcon />} label="Sacred" />
-        <NavButton active={activeTab === 'mind'} onClick={() => setActiveTab('mind')} icon={<MindIcon />} label="Intel" />
-        <NavButton active={activeTab === 'custom'} onClick={() => setActiveTab('custom'} icon={<CustomIcon />} label="Acts" />
-        <NavButton active={activeTab === 'journal'} onClick={() => setActiveTab('journal')} icon={<JournalIcon />} label="Log" />
+        <NavButton active={activeTab === 'status'} onClick={() => setActiveTab('status')} icon={<StatusIcon />} label="Status" />
+        <NavButton active={activeTab === 'amal'} onClick={() => setActiveTab('amal')} icon={<AmalIcon />} label="Work" />
+        <NavButton active={activeTab === 'spirit'} onClick={() => setActiveTab('spirit')} icon={<SpiritIcon />} label="Faith" />
+        <NavButton active={activeTab === 'mind'} onClick={() => setActiveTab('mind')} icon={<MindIcon />} label="Mind" />
+        <NavButton active={activeTab === 'custom'} onClick={() => setActiveTab('custom')} icon={<CustomIcon />} label="Acts" />
+        <NavButton active={activeTab === 'journal'} onClick={() => setActiveTab('journal')} icon={<JournalIcon />} label="Logs" />
       </nav>
 
       {isTaskModalOpen && <ManualTaskModal onClose={() => setIsTaskModalOpen(false)} onAddTask={addCustomTask} />}
@@ -367,11 +367,11 @@ const App: React.FC = () => {
 const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
   <button 
     onClick={onClick} 
-    className={`relative flex flex-col items-center transition-all duration-300 px-2 py-1 rounded-2xl ${active ? 'scale-110' : 'opacity-40 hover:opacity-100'}`}
+    className={`relative flex flex-col items-center transition-all duration-300 px-3 py-1.5 rounded-2xl ${active ? 'scale-110' : 'opacity-40 hover:opacity-100 hover:scale-105'}`}
   >
-    {active && <div className="absolute inset-0 system-bg rounded-xl blur-md -z-10"></div>}
-    <div className={`w-6 h-6 mb-1 ${active ? 'system-text' : 'text-gray-400'}`}>{icon}</div>
-    <span className={`text-[8px] font-system uppercase tracking-tight ${active ? 'system-text font-black' : 'text-gray-500'}`}>{label}</span>
+    {active && <div className="absolute inset-0 system-bg rounded-xl blur-lg -z-10 animate-pulse"></div>}
+    <div className={`w-6 h-6 mb-1 transition-colors ${active ? 'system-text' : 'text-gray-400'}`}>{icon}</div>
+    <span className={`text-[9px] font-system uppercase tracking-tight transition-colors ${active ? 'system-text font-black' : 'text-gray-500'}`}>{label}</span>
   </button>
 );
 
