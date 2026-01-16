@@ -37,7 +37,7 @@ export interface Reflection {
   category: string;
 }
 
-export type TaskTrackingType = 'reps' | 'minutes' | 'timer' | 'checkbox';
+export type TaskTrackingType = 'reps' | 'minutes' | 'timer' | 'checkbox' | 'countdown';
 
 export interface CustomTask {
   id: string;

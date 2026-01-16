@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, UserProfile, CustomTask } from '../types';
 
 interface QuestsProps {
@@ -14,9 +14,81 @@ interface QuestsProps {
 
 const Quests: React.FC<QuestsProps> = ({ exercises, profile, getTarget, onUpdateProgress, onUseRecovery, customTasks, onUpdateCustomTask }) => {
   const hasDebt = (Object.values(profile.penaltyDebt) as number[]).some(d => d > 0);
+  
+  // Timers State
+  const [plankTimeLeft, setPlankTimeLeft] = useState<number | null>(null);
+  const [isPlankActive, setIsPlankActive] = useState(false);
+  const [activeCustomTimerId, setActiveCustomTimerId] = useState<string | null>(null);
+  const [customTimeLeft, setCustomTimeLeft] = useState<number | null>(null);
+  
+  const timerRef = useRef<any>(null);
+  const customTimerRef = useRef<any>(null);
+
+  const startPlankTimer = (target: number) => {
+    setPlankTimeLeft(target);
+    setIsPlankActive(true);
+  };
+
+  const cancelPlankTimer = () => {
+    setIsPlankActive(false);
+    setPlankTimeLeft(null);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const startCustomTimer = (taskId: string, target: number, unit: string) => {
+    const totalSeconds = unit === 'min' ? target * 60 : target;
+    setActiveCustomTimerId(taskId);
+    setCustomTimeLeft(totalSeconds);
+  };
+
+  const cancelCustomTimer = () => {
+    setActiveCustomTimerId(null);
+    setCustomTimeLeft(null);
+    if (customTimerRef.current) clearInterval(customTimerRef.current);
+  };
+
+  useEffect(() => {
+    if (isPlankActive && plankTimeLeft !== null && plankTimeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setPlankTimeLeft(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (plankTimeLeft === 0 && isPlankActive) {
+      const plankEx = exercises.find(e => e.id === 'plank');
+      if (plankEx) {
+        onUpdateProgress('plank', getTarget(plankEx));
+      }
+      setIsPlankActive(false);
+      setPlankTimeLeft(null);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isPlankActive, plankTimeLeft, exercises, onUpdateProgress, getTarget]);
+
+  useEffect(() => {
+    if (activeCustomTimerId && customTimeLeft !== null && customTimeLeft > 0) {
+      customTimerRef.current = setInterval(() => {
+        setCustomTimeLeft(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (customTimeLeft === 0 && activeCustomTimerId) {
+      const task = customTasks.find(t => t.id === activeCustomTimerId);
+      if (task) {
+        onUpdateCustomTask(task.id, task.target);
+      }
+      setActiveCustomTimerId(null);
+      setCustomTimeLeft(null);
+      if (customTimerRef.current) clearInterval(customTimerRef.current);
+    }
+    return () => { if (customTimerRef.current) clearInterval(customTimerRef.current); };
+  }, [activeCustomTimerId, customTimeLeft, customTasks, onUpdateCustomTask]);
 
   const handleCustomAdd = (taskId: string, currentVal: number, target: number, amount: number) => {
     onUpdateCustomTask(taskId, Math.min(target, currentVal + amount));
+  };
+
+  const formatCountdown = (totalSeconds: number) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -58,6 +130,7 @@ const Quests: React.FC<QuestsProps> = ({ exercises, profile, getTarget, onUpdate
         {exercises.map(ex => {
           const target = getTarget(ex);
           const debt = profile.penaltyDebt[ex.id] || 0;
+          const isPlank = ex.id === 'plank';
           
           return (
             <div key={ex.id} className={`group p-6 rounded-[2rem] border transition-all duration-500 ${ex.completed ? 'bg-black/20 border-white/5 opacity-50 grayscale' : 'bg-black/60 border-white/10 shadow-2xl hover:border-white/30'} relative overflow-hidden`}>
@@ -87,39 +160,68 @@ const Quests: React.FC<QuestsProps> = ({ exercises, profile, getTarget, onUpdate
               </div>
               
               <div className="space-y-4">
-                <div className="flex items-center gap-5">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max={target} 
-                    value={ex.currentProgress}
-                    onChange={(e) => onUpdateProgress(ex.id, parseInt(e.target.value))}
-                    disabled={ex.completed}
-                    className="flex-1 accent-[var(--primary)] h-1.5 rounded-full cursor-pointer"
-                  />
-                  <div className="flex flex-col items-end">
-                    <span className="font-system text-[10px] font-black text-gray-500 uppercase tracking-tighter">PROGRESS</span>
-                    <span className="font-system text-xl font-black text-white tabular-nums leading-none tracking-tighter italic">
-                      {ex.currentProgress}<span className="text-xs text-gray-600">/{target}</span>
-                    </span>
+                {isPlank && !ex.completed ? (
+                  <div className="flex flex-col gap-4">
+                    {isPlankActive ? (
+                      <div className="flex flex-col items-center gap-4 py-4 bg-black/40 rounded-3xl border border-white/5 animate-in zoom-in-95 duration-300">
+                        <span className="text-4xl font-system font-black text-white tabular-nums tracking-tighter system-glow animate-pulse">
+                          {plankTimeLeft}
+                        </span>
+                        <span className="text-[10px] font-system text-gray-500 uppercase tracking-widest font-black">SECONDS_REMAINING</span>
+                        <button 
+                          onClick={cancelPlankTimer}
+                          className="px-6 py-2 bg-red-600/20 border border-red-500/30 text-red-500 rounded-xl font-system text-[9px] font-black uppercase tracking-widest hover:bg-red-600/30 transition-all"
+                        >
+                          ABORT_SESSION
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => startPlankTimer(target)}
+                        className="w-full py-5 system-bg border system-border rounded-2xl system-text font-system text-[11px] font-black hover:scale-[1.01] transition-all uppercase tracking-widest italic shadow-xl flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        [ INITIATE_COUNTDOWN ]
+                      </button>
+                    )}
                   </div>
-                </div>
-                
-                {!ex.completed && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => onUpdateProgress(ex.id, ex.currentProgress + 1)}
-                      className="py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-system text-[11px] font-black hover:bg-white/10 transition-all uppercase tracking-widest italic"
-                    >
-                      +1 {ex.unit}
-                    </button>
-                    <button 
-                      onClick={() => onUpdateProgress(ex.id, ex.currentProgress + 10)}
-                      className="py-3 system-bg border system-border rounded-2xl system-text font-system text-[11px] font-black hover:bg-white/10 transition-all uppercase tracking-widest italic"
-                    >
-                      +10 {ex.unit}
-                    </button>
-                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-5">
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max={target} 
+                        value={ex.currentProgress}
+                        onChange={(e) => onUpdateProgress(ex.id, parseInt(e.target.value))}
+                        disabled={ex.completed}
+                        className="flex-1 accent-[var(--primary)] h-1.5 rounded-full cursor-pointer"
+                      />
+                      <div className="flex flex-col items-end">
+                        <span className="font-system text-[10px] font-black text-gray-500 uppercase tracking-tighter">PROGRESS</span>
+                        <span className="font-system text-xl font-black text-white tabular-nums leading-none tracking-tighter italic">
+                          {ex.currentProgress}<span className="text-xs text-gray-600">/{target}</span>
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {!ex.completed && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => onUpdateProgress(ex.id, ex.currentProgress + 1)}
+                          className="py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-system text-[11px] font-black hover:bg-white/10 transition-all uppercase tracking-widest italic"
+                        >
+                          +1 {ex.unit}
+                        </button>
+                        <button 
+                          onClick={() => onUpdateProgress(ex.id, ex.currentProgress + 10)}
+                          className="py-3 system-bg border system-border rounded-2xl system-text font-system text-[11px] font-black hover:bg-white/10 transition-all uppercase tracking-widest italic"
+                        >
+                          +10 {ex.unit}
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -137,17 +239,40 @@ const Quests: React.FC<QuestsProps> = ({ exercises, profile, getTarget, onUpdate
                    <span className="text-[8px] font-system font-black px-2 py-1 rounded-lg system-bg system-text uppercase tracking-widest">+{task.expReward} EXP</span>
                 </div>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                     <div className="flex-1 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
-                        <div className="h-full system-btn" style={{ width: `${(task.current / task.target) * 100}%` }} />
-                     </div>
-                     <span className="font-system text-xs font-black text-white italic tabular-nums">{task.current}/{task.target} {task.unit}</span>
-                  </div>
-                  {!task.completed && (
-                    <div className="grid grid-cols-2 gap-2">
-                       <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 1)} className="py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-system text-[9px] font-black uppercase tracking-widest italic">+1</button>
-                       <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 5)} className="py-2.5 system-bg border system-border rounded-xl system-text font-system text-[9px] font-black uppercase tracking-widest italic">+5</button>
+                  {task.trackingType === 'countdown' && !task.completed ? (
+                    <div className="flex flex-col gap-3">
+                      {activeCustomTimerId === task.id ? (
+                        <div className="flex flex-col items-center gap-3 py-4 bg-black/40 rounded-3xl border border-white/5">
+                           <span className="text-3xl font-system font-black text-white system-glow tabular-nums">
+                             {formatCountdown(customTimeLeft || 0)}
+                           </span>
+                           <button onClick={cancelCustomTimer} className="text-[8px] font-system text-red-500 uppercase font-black">ABORT</button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => startCustomTimer(task.id, task.target, task.unit)}
+                          className="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-white font-system text-[10px] font-black uppercase tracking-widest italic flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          START_COUNTDOWN ({task.target} {task.unit})
+                        </button>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-4">
+                         <div className="flex-1 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-full system-btn" style={{ width: `${(task.current / task.target) * 100}%` }} />
+                         </div>
+                         <span className="font-system text-xs font-black text-white italic tabular-nums">{task.current}/{task.target} {task.unit}</span>
+                      </div>
+                      {!task.completed && (
+                        <div className="grid grid-cols-2 gap-2">
+                           <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 1)} className="py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-system text-[9px] font-black uppercase tracking-widest italic">+1</button>
+                           <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 5)} className="py-2.5 system-bg border system-border rounded-xl system-text font-system text-[9px] font-black uppercase tracking-widest italic">+5</button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

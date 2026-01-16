@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Exercise, Salah, KnowledgeQuest, Reflection, CustomTask, PenaltyDebt, SystemTheme, DailyRecord } from './types';
 import { INITIAL_PROFILE, INITIAL_EXERCISES, INITIAL_SALAH, INITIAL_KNOWLEDGE, SOUND_ASSETS } from './constants';
@@ -16,7 +15,6 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('muhasabah_profile');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure backward compatibility for soundEnabled
       return { ...INITIAL_PROFILE, ...parsed };
     }
     return INITIAL_PROFILE;
@@ -46,7 +44,6 @@ const App: React.FC = () => {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'warning' } | null>(null);
 
-  // Audio References
   const soundRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   useEffect(() => {
@@ -61,16 +58,14 @@ const App: React.FC = () => {
   const playSound = useCallback((key: keyof typeof soundRefs.current) => {
     if (profile.soundEnabled && soundRefs.current[key]) {
       soundRefs.current[key].currentTime = 0;
-      soundRefs.current[key].play().catch(() => { /* Browser block */ });
+      soundRefs.current[key].play().catch(() => { });
     }
   }, [profile.soundEnabled]);
 
-  // Apply Theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', profile.theme);
   }, [profile.theme]);
 
-  // Auto-save
   useEffect(() => {
     localStorage.setItem('muhasabah_profile', JSON.stringify(profile));
     localStorage.setItem('muhasabah_exercises', JSON.stringify(exercises));
@@ -182,17 +177,17 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [profile.lastResetDate, handleDailyReset]);
 
-  const changeTheme = (theme: SystemTheme) => {
+  const changeTheme = useCallback((theme: SystemTheme) => {
     setProfile(prev => ({ ...prev, theme }));
     playSound('notification');
     setNotification({ message: `System Aesthetics Synchronized: ${theme.toUpperCase()}`, type: 'success' });
-  };
+  }, [playSound]);
 
-  const toggleSound = () => {
+  const toggleSound = useCallback(() => {
     setProfile(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }));
-  };
+  }, []);
 
-  const updateExerciseProgress = (id: string, progress: number) => {
+  const updateExerciseProgress = useCallback((id: string, progress: number) => {
     setExercises(prev => prev.map(e => {
       if (e.id === id) {
         const target = getTarget(e);
@@ -206,17 +201,17 @@ const App: React.FC = () => {
       }
       return e;
     }));
-  };
+  }, [getTarget, addExp, playSound]);
 
-  const useRecoveryPrivilege = () => {
+  const useRecoveryPrivilege = useCallback(() => {
     if (profile.streak >= 5 && !profile.recoveryPrivilegeUsed) {
       setProfile(prev => ({ ...prev, recoveryPrivilegeUsed: true }));
       playSound('notification');
       setNotification({ message: "Recovery Active. Vessel stabilization initialized.", type: 'success' });
     }
-  };
+  }, [profile.streak, profile.recoveryPrivilegeUsed, playSound]);
 
-  const toggleSalah = (id: string) => {
+  const toggleSalah = useCallback((id: string) => {
     setSalah(prev => prev.map(s => {
       if (s.id === id && !s.completed) {
         addExp(5);
@@ -224,9 +219,9 @@ const App: React.FC = () => {
       }
       return s.id === id ? { ...s, completed: !s.completed } : s;
     }));
-  };
+  }, [addExp, playSound]);
 
-  const updateKnowledgeProgress = (id: string, minutes: number) => {
+  const updateKnowledgeProgress = useCallback((id: string, minutes: number) => {
     setKnowledge(prev => prev.map(k => {
       const isNewlyCompleted = minutes >= k.targetMinutes && !k.completed;
       if (isNewlyCompleted) {
@@ -235,33 +230,33 @@ const App: React.FC = () => {
       }
       return k.id === id ? { ...k, currentMinutes: Math.min(k.targetMinutes, minutes), completed: minutes >= k.targetMinutes } : k;
     }));
-  };
+  }, [addExp, playSound]);
 
-  const addStudyTime = (minutes: number) => {
+  const addStudyTime = useCallback((minutes: number) => {
     setStudyMinutes(prev => prev + minutes);
     playSound('success');
     addExp(Math.floor(minutes / 5));
-  };
+  }, [addExp, playSound]);
 
-  const addReflection = (reflection: Omit<Reflection, 'id'>) => {
+  const addReflection = useCallback((reflection: Omit<Reflection, 'id'>) => {
     setProfile(prev => ({
       ...prev,
       reflections: [{ ...reflection, id: Date.now().toString() }, ...prev.reflections]
     }));
     playSound('notification');
     addExp(5);
-  };
+  }, [addExp, playSound]);
 
-  const addCustomTask = (task: Omit<CustomTask, 'id' | 'completed'>) => {
+  const addCustomTask = useCallback((task: Omit<CustomTask, 'id' | 'completed'>) => {
     setProfile(prev => ({
       ...prev,
       customTasks: [...prev.customTasks, { ...task, id: Date.now().toString(), completed: task.current >= task.target }]
     }));
     setIsTaskModalOpen(false);
     playSound('notification');
-  };
+  }, [playSound]);
 
-  const updateCustomTask = (id: string, current: number) => {
+  const updateCustomTask = useCallback((id: string, current: number) => {
     setProfile(prev => ({
       ...prev,
       customTasks: prev.customTasks.map(t => {
@@ -273,11 +268,11 @@ const App: React.FC = () => {
         return t.id === id ? { ...t, current: Math.min(t.target, current), completed: current >= t.target } : t;
       })
     }));
-  };
+  }, [addExp, playSound]);
 
-  const removeCustomTask = (id: string) => {
+  const removeCustomTask = useCallback((id: string) => {
     setProfile(prev => ({ ...prev, customTasks: prev.customTasks.filter(t => t.id !== id) }));
-  };
+  }, []);
 
   return (
     <div className="min-h-screen pb-40 pt-4 md:pt-6 flex flex-col items-center">
@@ -347,8 +342,7 @@ const App: React.FC = () => {
         {activeTab === 'journal' && <Journal reflections={profile.reflections} onAddReflection={addReflection} />}
       </main>
 
-      {/* Floating Navigation Dock */}
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-md nav-glass rounded-[2rem] flex justify-around p-3 z-50 shadow-2xl overflow-hidden border border-white/10">
+      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md nav-glass rounded-[2rem] flex justify-around p-3 z-50 shadow-2xl overflow-hidden border border-white/10">
         <div className="absolute inset-0 bg-white/5 opacity-50 pointer-events-none"></div>
         <NavButton active={activeTab === 'status'} onClick={() => setActiveTab('status')} icon={<StatusIcon />} label="Status" />
         <NavButton active={activeTab === 'amal'} onClick={() => setActiveTab('amal')} icon={<AmalIcon />} label="Work" />

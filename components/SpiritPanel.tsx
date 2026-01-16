@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Salah, KnowledgeQuest, CustomTask } from '../types';
 
 interface SpiritPanelProps {
@@ -12,8 +12,47 @@ interface SpiritPanelProps {
 }
 
 const SpiritPanel: React.FC<SpiritPanelProps> = ({ salah, knowledge, onToggleSalah, onUpdateKnowledge, customTasks, onUpdateCustomTask }) => {
+  const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const timerRef = useRef<any>(null);
+
+  const startTimer = (taskId: string, target: number, unit: string) => {
+    const totalSeconds = unit === 'min' ? target * 60 : target;
+    setActiveTimerId(taskId);
+    setTimeLeft(totalSeconds);
+  };
+
+  const cancelTimer = () => {
+    setActiveTimerId(null);
+    setTimeLeft(null);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  useEffect(() => {
+    if (activeTimerId && timeLeft !== null && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (timeLeft === 0 && activeTimerId) {
+      const task = customTasks.find(t => t.id === activeTimerId);
+      if (task) {
+        onUpdateCustomTask(task.id, task.target);
+      }
+      setActiveTimerId(null);
+      setTimeLeft(null);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [activeTimerId, timeLeft, customTasks, onUpdateCustomTask]);
+
   const handleCustomAdd = (taskId: string, currentVal: number, target: number, amount: number) => {
     onUpdateCustomTask(taskId, Math.min(target, currentVal + amount));
+  };
+
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -87,25 +126,46 @@ const SpiritPanel: React.FC<SpiritPanelProps> = ({ salah, knowledge, onToggleSal
                  <span className="text-[8px] font-system font-black px-2 py-1 rounded-lg system-bg system-text uppercase tracking-widest">+{task.expReward} EXP</span>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                   <div className="flex-1 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
-                      <div className="h-full bg-emerald-500" style={{ width: `${(task.current / task.target) * 100}%` }} />
+                {task.trackingType === 'countdown' && !task.completed ? (
+                   <div className="flex flex-col gap-3">
+                      {activeTimerId === task.id ? (
+                        <div className="flex flex-col items-center gap-2 py-4 bg-black/40 rounded-3xl border border-white/5">
+                           <span className="text-3xl font-system font-black system-text system-glow tabular-nums animate-pulse">
+                              {formatTime(timeLeft || 0)}
+                           </span>
+                           <button onClick={cancelTimer} className="text-[8px] font-system text-red-500 uppercase font-black">ABORT</button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => startTimer(task.id, task.target, task.unit)}
+                          className="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-system text-[10px] font-black uppercase tracking-widest italic flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          START_COUNTDOWN ({task.target} {task.unit})
+                        </button>
+                      )}
                    </div>
-                   <span className="font-system text-xs font-black text-white italic tabular-nums">{task.current}/{task.target} {task.unit}</span>
-                </div>
-                {!task.completed && (
-                  <div className="grid grid-cols-2 gap-2">
-                     <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 1)} className="py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-system text-[9px] font-black uppercase tracking-widest italic">+1</button>
-                     <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 5)} className="py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-system text-[9px] font-black uppercase tracking-widest italic">+5</button>
-                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-4">
+                       <div className="flex-1 h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
+                          <div className="h-full bg-emerald-500" style={{ width: `${(task.current / task.target) * 100}%` }} />
+                       </div>
+                       <span className="font-system text-xs font-black text-white italic tabular-nums">{task.current}/{task.target} {task.unit}</span>
+                    </div>
+                    {!task.completed && (
+                      <div className="grid grid-cols-2 gap-2">
+                         <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 1)} className="py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-system text-[9px] font-black uppercase tracking-widest italic">+1</button>
+                         <button onClick={() => handleCustomAdd(task.id, task.current, task.target, 5)} className="py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-system text-[9px] font-black uppercase tracking-widest italic">+5</button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
-
-      <p className="mt-4 text-[9px] text-center text-gray-600 uppercase tracking-[0.2em] font-black">These are tracked for self-accountability. Private by default.</p>
     </div>
   );
 };

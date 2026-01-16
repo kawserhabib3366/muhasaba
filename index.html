@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,13 +110,32 @@
             animation: title-breathing 3s ease-in-out infinite;
         }
 
-        .rpg-panel {
+        @keyframes complete-glow {
+            0% { box-shadow: 0 0 0px var(--primary-glow); }
+            50% { box-shadow: 0 0 30px var(--primary-glow); }
+            100% { box-shadow: 0 0 0px var(--primary-glow); }
+        }
+
+        .animate-complete {
+            animation: complete-glow 1s ease-in-out;
+        }
+
+        .rpg-panel, .holographic-panel {
             position: relative;
             background: rgba(10, 10, 10, 0.6);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 2rem;
             overflow: hidden;
+        }
+
+        .level-up-animate {
+            animation: level-up-glow 2.5s ease-in-out;
+        }
+
+        @keyframes level-up-glow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(2); transform: scale(1.1); }
         }
 
         .corner-accent::before, .corner-accent::after {

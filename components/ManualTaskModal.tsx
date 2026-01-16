@@ -20,7 +20,7 @@ const ManualTaskModal: React.FC<ManualTaskModalProps> = ({ onClose, onAddTask })
     if (trackingType === 'checkbox') {
       setTarget(1);
       setUnit('complete');
-    } else if (trackingType === 'minutes' || trackingType === 'timer') {
+    } else if (trackingType === 'minutes' || trackingType === 'timer' || trackingType === 'countdown') {
       setUnit('min');
     } else {
       setUnit('reps');
@@ -122,6 +122,7 @@ const ManualTaskModal: React.FC<ManualTaskModalProps> = ({ onClose, onAddTask })
                   <option value="minutes">Minutes</option>
                   <option value="timer">Timer</option>
                   <option value="checkbox">Checkbox</option>
+                  <option value="countdown">Countdown</option>
                 </select>
              </div>
              <div className="space-y-2">

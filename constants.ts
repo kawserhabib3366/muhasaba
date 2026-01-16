@@ -23,7 +23,7 @@ export const INITIAL_PROFILE: UserProfile = {
       id: 'init-meditation',
       title: 'Meditation',
       category: 'Spiritual',
-      trackingType: 'minutes',
+      trackingType: 'countdown',
       target: 15,
       current: 0,
       completed: false,
