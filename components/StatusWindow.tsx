@@ -1,6 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { UserProfile, Salah, KnowledgeQuest, Exercise } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserProfile, Salah, KnowledgeQuest, Exercise, SystemTheme } from '../types';
+import WeeklyReport from './WeeklyReport';
+import RankPath from './RankPath';
 
 interface StatusWindowProps {
   profile: UserProfile;
@@ -10,131 +12,208 @@ interface StatusWindowProps {
   exercises: Exercise[];
   getTarget: (ex: Exercise) => number;
   onOpenModal: () => void;
+  onChangeTheme: (theme: SystemTheme) => void;
+  onToggleSound: () => void;
 }
 
-const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, studyMinutes, exercises, getTarget, onOpenModal }) => {
+const StatusWindow: React.FC<StatusWindowProps> = ({ profile, salah, knowledge, studyMinutes, exercises, getTarget, onOpenModal, onChangeTheme, onToggleSound }) => {
   const [time, setTime] = useState(new Date());
+  const [showRankPath, setShowRankPath] = useState(false);
+  const [isLevelingUp, setIsLevelingUp] = useState(false);
+  const prevLevelRef = useRef(profile.physicalLevel);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Level Up Flourish Detection
+  useEffect(() => {
+    if (profile.physicalLevel > prevLevelRef.current) {
+      setIsLevelingUp(true);
+      const timer = setTimeout(() => setIsLevelingUp(false), 2000);
+      prevLevelRef.current = profile.physicalLevel;
+      return () => clearTimeout(timer);
+    }
+    prevLevelRef.current = profile.physicalLevel;
+  }, [profile.physicalLevel]);
+
   const salahCount = salah.filter(s => s.completed).length;
   const knowledgeProgress = knowledge.reduce((acc, k) => acc + (k.currentMinutes / k.targetMinutes), 0) / (knowledge.length || 1);
   const physicalProgress = exercises.filter(e => e.completed).length / (exercises.length || 1);
   const studyProgress = Math.min(1, studyMinutes / 120);
-
   const totalCompletion = ((salahCount/5 * 40) + (knowledgeProgress * 20) + (physicalProgress * 30) + (studyProgress * 10));
-  
-  // Fix: Explicitly cast values to number array to resolve comparison with 'unknown' type
   const hasDebt = (Object.values(profile.penaltyDebt) as number[]).some(d => d > 0);
 
+  const expPercentage = (profile.exp / profile.nextLevelExp) * 100;
+
+  const themes: { id: SystemTheme; color: string; label: string; sub: string }[] = [
+    { id: 'emerald', color: 'bg-emerald-500', label: 'Emerald', sub: 'The System' },
+    { id: 'blue', color: 'bg-blue-500', label: 'Monarch', sub: 'Awakened' },
+    { id: 'red', color: 'bg-red-500', label: 'Frenzy', sub: 'Bloodlust' },
+    { id: 'gold', color: 'bg-amber-500', label: 'Royal', sub: 'National' },
+    { id: 'violet', color: 'bg-purple-500', label: 'Abyssal', sub: 'Shadow' },
+  ];
+
+  const currentRank = profile.physicalLevel > 30 ? 'NAT' : 
+                     profile.physicalLevel > 25 ? 'S' : 
+                     profile.physicalLevel > 20 ? 'A' : 
+                     profile.physicalLevel > 15 ? 'B' : 
+                     profile.physicalLevel > 10 ? 'C' : 
+                     profile.physicalLevel > 5 ? 'D' : 'E';
+
   return (
-    <div className="w-full flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
-      <div className="flex justify-between items-center px-2">
+    <div className="w-full flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+      <div className="flex justify-between items-end px-2">
         <div className="flex flex-col">
-          <span className="text-[10px] font-system text-emerald-500 uppercase tracking-widest">SYSTEM INITIALIZED</span>
-          <span className="font-system text-lg text-white tabular-nums tracking-tighter">{time.toLocaleTimeString([], { hour12: false })}</span>
+          <span className="text-[10px] font-system system-text uppercase tracking-[0.2em] font-black">SYSTEM_TIME</span>
+          <span className="font-system text-2xl text-white tabular-nums tracking-tighter system-glow leading-none transition-theme">
+            {time.toLocaleTimeString([], { hour12: false })}
+          </span>
         </div>
-        <div className="text-right">
-          <span className="text-[10px] font-system text-emerald-500 uppercase tracking-widest">STREAK</span>
-          <div className="flex items-center gap-1 justify-end">
-             <span className="font-system text-xl font-black text-white">{profile.streak}</span>
-             <span className="text-[9px] text-gray-500 font-system uppercase">Days</span>
+        
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={onToggleSound}
+            className="group flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-all"
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${profile.soundEnabled ? 'system-text system-bg' : 'text-gray-600'}`}>
+              {profile.soundEnabled ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M6.5 8H4v8h2.5l4.5 4.5V3.5L6.5 8z" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4V9h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              )}
+            </div>
+            <span className="text-[7px] font-system uppercase font-black tracking-widest">{profile.soundEnabled ? 'AUDIO_ON' : 'AUDIO_MUTED'}</span>
+          </button>
+
+          <div className="text-right flex flex-col items-end">
+            <span className="text-[10px] font-system system-text uppercase tracking-[0.2em] font-black">DAILY_STREAK</span>
+            <div className="flex items-center gap-2">
+               <span className="font-system text-3xl font-black text-white italic leading-none transition-theme">{profile.streak}</span>
+               <span className="text-[10px] text-gray-500 font-system uppercase tracking-widest font-black">DAYS</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-black/40 border border-emerald-500/20 p-6 rounded-2xl backdrop-blur-md relative overflow-hidden">
+      {/* Main Status Panel */}
+      <div className="bg-black/40 border border-white/10 p-7 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden group transition-theme">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
         {hasDebt && (
-          <div className="absolute top-0 right-0 px-3 py-1 bg-red-600/20 border-b border-l border-red-500/40 text-red-500 font-system text-[8px] font-black uppercase tracking-widest">
-            PENALTY ACTIVE
+          <div className="absolute top-0 right-0 px-4 py-1.5 bg-red-600/30 border-b border-l border-red-500/50 text-red-500 font-system text-[9px] font-black uppercase tracking-widest animate-pulse z-20">
+            PENALTY_OVERLOAD
           </div>
         )}
         
-        <div className="flex justify-between items-start mb-6">
-           <div>
-             <h2 className="font-system text-xl font-bold text-white mb-1 uppercase tracking-tight">STATUS WINDOW</h2>
-             <div className="flex items-center gap-2">
-               <span className="text-emerald-400 font-system text-[10px] font-semibold tracking-widest uppercase">STEWARD:</span>
-               <span className="text-white font-system font-bold uppercase text-sm">{profile.name}</span>
+        <div className="flex justify-between items-start mb-6 relative z-10">
+           <div className="space-y-3">
+             <div className="space-y-1">
+               <h2 className="font-system text-xs font-black text-gray-500 uppercase tracking-[0.3em]">STEWARD_CLASS</h2>
+               <div className="flex items-center gap-2">
+                 <span className="text-white font-system font-black uppercase text-2xl system-glow tracking-tight transition-theme">{profile.name}</span>
+               </div>
              </div>
-             <div className="mt-2 flex gap-2">
-               <div className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/40 rounded text-[10px] text-emerald-400 font-system font-bold uppercase">
+             <div className="flex gap-2">
+               <button 
+                onClick={() => setShowRankPath(!showRankPath)}
+                className={`px-3 py-1 system-bg border system-border rounded-xl text-[11px] system-text font-system font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95 ${showRankPath ? 'brightness-125' : ''}`}
+               >
+                  RANK: {currentRank}
+               </button>
+               <div className={`px-3 py-1 system-bg border system-border rounded-xl text-[11px] system-text font-system font-black uppercase tracking-wider transition-all ${isLevelingUp ? 'level-up-animate' : 'transition-theme'}`}>
                   LVL: {profile.physicalLevel}
                </div>
-               {profile.streak >= 5 && (
-                 <div className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/40 rounded text-[10px] text-yellow-500 font-system font-bold uppercase">
-                    REWARD READY
-                 </div>
-               )}
              </div>
            </div>
            <div className="text-right">
-              <span className="block text-[8px] font-system text-gray-500 uppercase mb-1">COMPLETION</span>
-              <span className={`text-4xl font-system font-black text-emerald-400 system-glow leading-none`}>{Math.round(totalCompletion)}%</span>
+              <span className="block text-[10px] font-system text-gray-500 uppercase mb-1 tracking-widest font-black">SYNC_RATE</span>
+              <span className={`text-6xl font-system font-black system-text system-glow leading-none italic transition-theme`}>{Math.round(totalCompletion)}%</span>
            </div>
         </div>
 
-        <div className="space-y-2">
-           <div className="flex justify-between text-[8px] font-system uppercase text-gray-400">
-             <span>DAILY PROGRESS</span>
-             <span className="text-emerald-400">{Math.round(totalCompletion)}% Complete</span>
+        <div className="space-y-4 relative z-10">
+           <div className="space-y-1.5">
+             <div className="flex justify-between text-[9px] font-system uppercase text-gray-400 tracking-widest font-black">
+               <span>EXPERIENCE_GAUGE</span>
+               <span className="system-text">{profile.exp} / {profile.nextLevelExp} EXP</span>
+             </div>
+             <div className="h-1.5 w-full bg-black/60 rounded-full border border-white/5 overflow-hidden">
+               <div 
+                 className="h-full bg-white transition-all duration-700 ease-out shadow-[0_0_10px_rgba(255,255,255,0.4)]" 
+                 style={{ width: `${expPercentage}%` }}
+               />
+             </div>
            </div>
-           <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden">
-             <div 
-               className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" 
-               style={{ width: `${totalCompletion}%` }}
-             />
+
+           <div className="space-y-1.5">
+             <div className="flex justify-between text-[9px] font-system uppercase text-gray-400 tracking-widest font-black">
+               <span>STEWARDSHIP_INDEX</span>
+               <span className="system-text font-black">CALIBRATED</span>
+             </div>
+             <div className="h-2 w-full bg-black/60 rounded-full border border-white/5 overflow-hidden">
+               <div 
+                 className="h-full system-btn transition-all duration-1000 ease-out" 
+                 style={{ width: `${totalCompletion}%` }}
+               />
+             </div>
            </div>
+        </div>
+      </div>
+
+      {/* Conditional Rank Progression Pathway */}
+      {showRankPath && <RankPath profile={profile} />}
+
+      {/* Weekly Summary Report */}
+      <WeeklyReport history={profile.weeklyHistory || []} />
+
+      {/* Theme Switcher & Actions */}
+      <div className="bg-black/60 border border-white/10 p-6 rounded-[2rem] backdrop-blur-md transition-theme space-y-6">
+        <div>
+          <h3 className="font-system text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-5 px-1">AESTHETIC_PROTOCOLS</h3>
+          <div className="grid grid-cols-5 gap-3">
+            {themes.map(t => (
+              <button
+                key={t.id}
+                onClick={() => onChangeTheme(t.id)}
+                className={`group flex flex-col items-center gap-2 p-2 rounded-2xl border transition-all duration-300 ${
+                  profile.theme === t.id ? 'system-border system-bg scale-105 bg-white/5' : 'border-transparent opacity-40 hover:opacity-100'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-2xl ${t.color} shadow-2xl relative ${profile.theme === t.id ? 'ring-2 ring-white/30' : ''}`}>
+                   {profile.theme === t.id && <div className="absolute inset-0 system-btn blur-md opacity-50 -z-10"></div>}
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] font-system font-black uppercase tracking-tighter text-white">{t.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-           <span className="text-[8px] font-system text-gray-500 uppercase block mb-1">STREAK STATUS</span>
-           <span className="text-sm font-system font-bold text-white">{profile.streak >= 7 ? "S-RANK STREAK" : profile.streak >= 3 ? "B-RANK STREAK" : "INITIATE"}</span>
+        <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col gap-1 group hover:bg-white/10 transition-all hover:-translate-y-1">
+           <span className="text-[10px] font-system text-gray-500 uppercase tracking-widest font-black">LIMIT_BREAK</span>
+           <span className="text-lg font-system font-black text-white italic tracking-tighter transition-theme">
+             {profile.streak >= 7 ? "SYSTEM_OVERRIDE" : profile.streak >= 3 ? "STABLE_FLOW" : "INITIALIZING"}
+           </span>
         </div>
-        <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-           <span className="text-[8px] font-system text-gray-500 uppercase block mb-1">RECOVERY STATUS</span>
-           <span className={`text-sm font-system font-bold ${profile.recoveryPrivilegeUsed ? 'text-emerald-400' : 'text-gray-400'}`}>
-             {profile.recoveryPrivilegeUsed ? "ACTIVE" : profile.streak >= 5 ? "AVAILABLE" : "LOCKED"}
+        <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col gap-1 group hover:bg-white/10 transition-all hover:-translate-y-1">
+           <span className="text-[10px] font-system text-gray-500 uppercase tracking-widest font-black">RECOVERY_POOL</span>
+           <span className={`text-lg font-system font-black italic tracking-tighter transition-theme ${profile.recoveryPrivilegeUsed ? 'system-text' : 'text-gray-600'}`}>
+             {profile.recoveryPrivilegeUsed ? "REGENERATING" : profile.streak >= 5 ? "POOL_MAX" : "EMPTY"}
            </span>
         </div>
       </div>
 
-      {profile.streak >= 7 && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12z" /></svg>
-             </div>
-             <div>
-               <span className="text-[10px] font-system text-emerald-400 font-bold uppercase block">Shadow Recovery</span>
-               <p className="text-[8px] text-gray-500 font-system uppercase">Consistent effort rewarded.</p>
-             </div>
-           </div>
-           <span className="text-[10px] font-system text-white font-black italic uppercase">Biriyani Mode Unlocked</span>
-        </div>
-      )}
+      <div className="mt-2 p-6 border-l-4 system-border system-bg rounded-r-[2rem] transition-theme">
+        <p className="text-[12px] font-system system-text leading-relaxed italic uppercase font-black tracking-tight">
+          "The System tracks every breath, every muscle fiber, and every second of silence. Consistency is the only currency that never devalues."
+        </p>
+      </div>
     </div>
   );
 };
-
-const ReportBar: React.FC<{ label: string, progress: number, text: string, color: string }> = ({ label, progress, text, color }) => (
-  <div className="space-y-1.5">
-    <div className="flex justify-between items-center text-[8px] font-system uppercase tracking-wider">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-bold text-white`}>{text}</span>
-    </div>
-    <div className="h-1 w-full bg-black/40 rounded-full border border-white/5 overflow-hidden">
-      <div 
-        className={`h-full ${color} transition-all duration-700`} 
-        style={{ width: `${progress * 100}%` }}
-      />
-    </div>
-  </div>
-);
 
 export default StatusWindow;

@@ -5,6 +5,8 @@ export const INITIAL_PROFILE: UserProfile = {
   name: "Seeker",
   title: "Al-Muta'allim (The Learner)",
   physicalLevel: 1,
+  exp: 0,
+  nextLevelExp: 100,
   dailyCompletionRate: 0,
   lastResetDate: new Date().toISOString(),
   streak: 0,
@@ -16,7 +18,22 @@ export const INITIAL_PROFILE: UserProfile = {
   },
   recoveryPrivilegeUsed: false,
   reflections: [],
-  customTasks: []
+  customTasks: [
+    {
+      id: 'init-meditation',
+      title: 'Meditation',
+      category: 'Spiritual',
+      trackingType: 'minutes',
+      target: 15,
+      current: 0,
+      completed: false,
+      unit: 'min',
+      expReward: 3
+    }
+  ],
+  theme: 'emerald',
+  weeklyHistory: [],
+  soundEnabled: true
 };
 
 export const INITIAL_SALAH: Salah[] = [
@@ -39,3 +56,10 @@ export const INITIAL_EXERCISES: Exercise[] = [
   { id: 'situps', title: 'Sit-ups', baseTarget: 10, unit: 'reps', completed: false, currentProgress: 0 },
   { id: 'plank', title: 'Plank', baseTarget: 30, unit: 'sec', completed: false, currentProgress: 0 },
 ];
+
+export const SOUND_ASSETS = {
+  LEVEL_UP: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3',
+  SUCCESS: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+  NOTIFICATION: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+  WARNING: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'
+};

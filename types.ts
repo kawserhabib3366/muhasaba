@@ -1,4 +1,14 @@
 
+export type SystemTheme = 'emerald' | 'blue' | 'red' | 'gold' | 'violet';
+
+export interface DailyRecord {
+  date: string;
+  physicalCompletions: number;
+  spiritualCompletions: number;
+  intellectualCompletions: number;
+  score: number;
+}
+
 export interface Stats {
   physical: number;
   intellectual: number;
@@ -38,6 +48,7 @@ export interface CustomTask {
   current: number;
   completed: boolean;
   unit: string;
+  expReward: number;
 }
 
 export interface PenaltyDebt {
@@ -51,6 +62,8 @@ export interface UserProfile {
   name: string;
   title: string;
   physicalLevel: number;
+  exp: number;
+  nextLevelExp: number;
   dailyCompletionRate: number;
   lastResetDate: string;
   streak: number;
@@ -58,6 +71,9 @@ export interface UserProfile {
   recoveryPrivilegeUsed: boolean;
   reflections: Reflection[];
   customTasks: CustomTask[];
+  theme: SystemTheme;
+  weeklyHistory: DailyRecord[];
+  soundEnabled: boolean;
 }
 
 export interface Exercise {
